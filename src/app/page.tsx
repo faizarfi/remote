@@ -19,6 +19,7 @@ import {
 } from '@/lib/storage';
 
 import { HeaderBar } from '@/components/HeaderBar';
+import { QuickConnectBanner } from '@/components/QuickConnectBanner';
 import { RemoteBody } from '@/components/RemoteBody';
 import { VirtualTvPanel } from '@/components/VirtualTvPanel';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -64,6 +65,7 @@ export default function RemotePage() {
 
   const activeDevice = devices.find((d) => d.id === activeDeviceId) || devices[0] || DEFAULT_DEVICE;
   const activeBrand = TV_BRANDS.find((b) => b.id === activeDevice.brandId) || TV_BRANDS[0];
+  const isSimulation = activeDevice.protocol === 'simulation';
 
   // Penanganan Perintah Remote
   const handleCommand = async (cmd: RemoteCommand) => {
@@ -164,6 +166,13 @@ export default function RemotePage() {
         showTvPanel={showTvPanel}
         onToggleTvPanel={() => setShowTvPanel(!showTvPanel)}
         onOpenTrackpad={() => setIsTrackpadOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenHelp={() => setIsHelpOpen(true)}
+      />
+
+      {/* Quick Connect Alert Banner (Jika masih dalam Simulator Mode) */}
+      <QuickConnectBanner
+        isSimulation={isSimulation}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHelp={() => setIsHelpOpen(true)}
       />
