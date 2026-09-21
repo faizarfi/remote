@@ -1,9 +1,30 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Check, Tv, Settings2, Activity, Mouse, Info } from 'lucide-react';
+import { X, Trash2, Check, Tv, Activity, Mouse, Radio, SlidersHorizontal } from 'lucide-react';
 import { TVDevice, ProtocolType } from '@/lib/types';
 import { TV_BRANDS } from '@/lib/tvBrands';
+import { DeviceScanner } from './DeviceScanner';
+
+function createManualTvDevice(params: {
+  name: string;
+  brandId: string;
+  ipAddress: string;
+  port: number;
+  protocol: ProtocolType;
+}): TVDevice {
+  const timestamp = Date.now();
+  const rand = Math.random().toString(36).substring(2, 6);
+  return {
+    id: `tv-${timestamp}-${rand}`,
+    name: params.name.trim(),
+    brandId: params.brandId,
+    ipAddress: params.ipAddress.trim() || '192.168.1.100',
+    port: Number(params.port) || 80,
+    protocol: params.protocol,
+    createdAt: timestamp,
+  };
+}
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,6 +34,7 @@ interface SettingsModalProps {
   onSelectDevice: (id: string) => void;
   onSaveDevice: (device: TVDevice) => void;
   onDeleteDevice: (id: string) => void;
+  initialAddMode?: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -23,14 +45,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSelectDevice,
   onSaveDevice,
   onDeleteDevice,
+  initialAddMode = false,
 }) => {
-  const [isAdding, setIsAdding] = useState(false);
+  const [isAdding, setIsAdding] = useState(initialAddMode || devices.length === 1);
+  const [addTab, setAddTab] = useState<'scan' | 'manual'>('scan');
+
+  // Manual Form State
   const [newDeviceName, setNewDeviceName] = useState('');
   const [newBrandId, setNewBrandId] = useState('android-tv');
   const [newIpAddress, setNewIpAddress] = useState('192.168.1.');
   const [newPort, setNewPort] = useState(6466);
   const [newProtocol, setNewProtocol] = useState<ProtocolType>('android-tv');
-  const [newWebhookUrl, setNewWebhookUrl] = useState('');
   const [pingStatus, setPingStatus] = useState<string | null>(null);
   const [isPinging, setIsPinging] = useState(false);
 
@@ -72,20 +97,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleManualAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDeviceName.trim()) return;
 
-    const newDevice: TVDevice = {
-      id: `tv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      name: newDeviceName.trim(),
+    const newDevice = createManualTvDevice({
+      name: newDeviceName,
       brandId: newBrandId,
-      ipAddress: newIpAddress.trim() || '192.168.1.100',
-      port: Number(newPort) || 80,
+      ipAddress: newIpAddress,
+      port: newPort,
       protocol: newProtocol,
-      webhookUrl: newWebhookUrl.trim() || undefined,
-      createdAt: Date.now(),
-    };
+    });
 
     onSaveDevice(newDevice);
     onSelectDevice(newDevice.id);
@@ -94,13 +116,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     onClose();
   };
 
+  const handlePairFromScanner = (device: TVDevice) => {
+    onSaveDevice(device);
+    onSelectDevice(device.id);
+    setIsAdding(false);
+    onClose();
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content scanner-modal-large" onClick={(e) => e.stopPropagation()}>
+        {/* Modal Header */}
         <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Settings2 size={20} color="#38bdf8" />
-            <h2 className="modal-title">Hubungkan ke Smart TV Anda</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="logo-badge" style={{ width: '32px', height: '32px' }}>
+              <Radio size={18} color="#ffffff" />
+            </div>
+            <div>
+              <h2 className="modal-title" style={{ fontSize: '1.15rem' }}>
+                {isAdding ? 'Pindai & Tautkan Smart TV' : 'Manajemen Smart TV'}
+              </h2>
+              <p style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                {isAdding
+                  ? 'Deteksi otomatis TV di jaringan Wi-Fi rumah dan tautkan sekali klik'
+                  : 'Pilih TV aktif atau sambungkan perangkat baru'}
+              </p>
+            </div>
           </div>
           <button
             type="button"
@@ -112,44 +153,209 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        {/* Tip penting jika remote rusak */}
-        <div
-          style={{
-            padding: '12px',
-            background: 'rgba(56, 189, 248, 0.08)',
-            border: '1px solid rgba(56, 189, 248, 0.25)',
-            borderRadius: '14px',
-            fontSize: '0.8rem',
-            color: '#bae6fd',
-            display: 'flex',
-            gap: '10px',
-            alignItems: 'flex-start',
-          }}
-        >
-          <Mouse size={18} color="#38bdf8" style={{ flexShrink: 0, marginTop: '2px' }} />
-          <div>
-            <strong>Tips Jika Remote Fisik TV Rusak:</strong>
-            <div style={{ color: '#93c5fd', marginTop: '3px', lineHeight: '1.4' }}>
-              Colokkan <strong>Mouse USB komputer</strong> ke port USB di belakang Smart TV Anda! Kursor mouse akan muncul di layar TV sehingga Anda bisa membuka menu Pengaturan Wi-Fi untuk melihat alamat IP TV dengan mudah.
-            </div>
+        {/* View Switcher Bar (Jika Sedang Tambah / Pindai Device) */}
+        {isAdding ? (
+          <div className="scanner-tab-bar">
+            <button
+              type="button"
+              className={`scanner-tab-btn ${addTab === 'scan' ? 'active' : ''}`}
+              onClick={() => setAddTab('scan')}
+            >
+              <Radio size={15} />
+              <span>🔍 Pindai Otomatis (Rekomendasi)</span>
+            </button>
+            <button
+              type="button"
+              className={`scanner-tab-btn ${addTab === 'manual' ? 'active' : ''}`}
+              onClick={() => setAddTab('manual')}
+            >
+              <SlidersHorizontal size={15} />
+              <span>✍️ Input Manual</span>
+            </button>
           </div>
-        </div>
+        ) : null}
 
-        {/* Device List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* Main Content: Scanner or Manual Form or List */}
+        {isAdding && addTab === 'scan' ? (
+          <DeviceScanner
+            onPairDevice={handlePairFromScanner}
+            onSwitchToManual={() => setAddTab('manual')}
+            existingDeviceIps={devices.map((d) => d.ipAddress)}
+          />
+        ) : isAdding && addTab === 'manual' ? (
+          /* Manual Input Form */
+          <form
+            onSubmit={handleManualAddSubmit}
+            style={{
+              padding: '16px',
+              background: 'rgba(15, 18, 28, 0.95)',
+              border: '1.5px solid rgba(56, 189, 248, 0.35)',
+              borderRadius: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <strong style={{ fontSize: '0.92rem', color: '#38bdf8' }}>
+                Formulir IP TV Manual
+              </strong>
+              <button
+                type="button"
+                onClick={() => setAddTab('scan')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#38bdf8',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  textDecoration: 'underline',
+                }}
+              >
+                ← Kembali ke Radar Pemindai
+              </button>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">1. Merek Smart TV</label>
+              <select
+                className="form-select"
+                value={newBrandId}
+                onChange={(e) => handleBrandChange(e.target.value)}
+              >
+                {TV_BRANDS.filter((b) => b.id !== 'simulation').map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">2. Nama TV</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Contoh: TV Ruang Keluarga"
+                value={newDeviceName}
+                onChange={(e) => setNewDeviceName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">3. Alamat IP Smart TV</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  style={{ flex: 1 }}
+                  placeholder="Contoh: 192.168.1.45"
+                  value={newIpAddress}
+                  onChange={(e) => setNewIpAddress(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="rem-btn"
+                  onClick={handleTestPing}
+                  disabled={isPinging}
+                  style={{ padding: '0 12px', fontSize: '0.78rem', background: '#334155', gap: '4px' }}
+                >
+                  <Activity size={14} />
+                  <span>{isPinging ? 'Menguji...' : 'Tes IP'}</span>
+                </button>
+              </div>
+              {pingStatus && (
+                <div style={{ fontSize: '0.74rem', color: '#38bdf8', marginTop: '4px' }}>
+                  {pingStatus}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="form-group">
+                <label className="form-label">Port</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={newPort}
+                  onChange={(e) => setNewPort(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Protokol</label>
+                <select
+                  className="form-select"
+                  value={newProtocol}
+                  onChange={(e) => setNewProtocol(e.target.value as ProtocolType)}
+                >
+                  <option value="android-tv">Android TV / Google TV</option>
+                  <option value="samsung-tizen">Samsung Tizen Smart TV</option>
+                  <option value="lg-webos">LG webOS WebSocket</option>
+                  <option value="roku-ecp">Roku TV (ECP Port 8060)</option>
+                  <option value="sony-bravia">Sony Bravia Simple IP</option>
+                  <option value="esp32-ir">ESP32 / ESP8266 IR Blaster</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="rem-btn"
+              style={{
+                background: 'linear-gradient(135deg, #0284c7, #2563eb)',
+                color: '#ffffff',
+                padding: '12px',
+                fontWeight: 700,
+                marginTop: '6px',
+              }}
+            >
+              Simpan & Tautkan ke TV
+            </button>
+          </form>
+        ) : null}
+
+        {/* Existing Paired Devices List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#94a3b8' }}>
-              PILIH TV AKTIF ({devices.length})
+              DAFTAR TV TERSAMBUNG ({devices.length})
             </span>
-            {!isAdding && (
+            {!isAdding ? (
               <button
                 type="button"
                 className="rem-btn"
-                style={{ padding: '6px 14px', fontSize: '0.8rem', background: '#2563eb', color: '#ffffff', gap: '4px' }}
-                onClick={() => setIsAdding(true)}
+                style={{
+                  padding: '7px 14px',
+                  fontSize: '0.8rem',
+                  background: 'linear-gradient(135deg, #0284c7, #2563eb)',
+                  color: '#ffffff',
+                  gap: '6px',
+                  boxShadow: '0 4px 14px rgba(2, 132, 199, 0.4)',
+                }}
+                onClick={() => {
+                  setIsAdding(true);
+                  setAddTab('scan');
+                }}
               >
-                <Plus size={14} />
-                <span>+ Sambungkan TV Baru</span>
+                <Radio size={14} />
+                <span>+ Pindai & Tautkan TV Baru</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsAdding(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Sembunyikan Pemindai
               </button>
             )}
           </div>
@@ -236,136 +442,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* Add Device Form */}
-        {isAdding && (
-          <form
-            onSubmit={handleAddSubmit}
-            style={{
-              marginTop: '8px',
-              padding: '16px',
-              background: 'rgba(15, 18, 28, 0.95)',
-              border: '1.5px solid rgba(56, 189, 248, 0.4)',
-              borderRadius: '18px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <strong style={{ fontSize: '0.92rem', color: '#38bdf8' }}>
-                Formulir Sambung Smart TV
-              </strong>
-              <button
-                type="button"
-                onClick={() => setIsAdding(false)}
-                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.8rem' }}
-              >
-                Tutup Form
-              </button>
+        {/* Tip jika remote TV rusak */}
+        <div
+          style={{
+            padding: '12px',
+            background: 'rgba(56, 189, 248, 0.08)',
+            border: '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '14px',
+            fontSize: '0.78rem',
+            color: '#bae6fd',
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'flex-start',
+            marginTop: '6px',
+          }}
+        >
+          <Mouse size={18} color="#38bdf8" style={{ flexShrink: 0, marginTop: '2px' }} />
+          <div>
+            <strong>Tips Jika Remote Fisik TV Rusak:</strong>
+            <div style={{ color: '#93c5fd', marginTop: '2px', lineHeight: '1.4' }}>
+              Gunakan pemindai radar di atas untuk mendeteksi Smart TV Anda otomatis. Jika TV belum tersambung ke Wi-Fi, Anda bisa mencolokkan <strong>Mouse USB komputer</strong> ke port belakang TV untuk mengarahkan kursor dan menghubungkannya ke Wi-Fi.
             </div>
-
-            <div className="form-group">
-              <label className="form-label">1. Pilih Merek Smart TV Anda</label>
-              <select
-                className="form-select"
-                value={newBrandId}
-                onChange={(e) => handleBrandChange(e.target.value)}
-              >
-                {TV_BRANDS.filter(b => b.id !== 'simulation').map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">2. Beri Nama TV (contoh: TV Ruang Tamu)</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="Contoh: TV Ruang Keluarga"
-                value={newDeviceName}
-                onChange={(e) => setNewDeviceName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">
-                3. Alamat IP Smart TV (dari menu Pengaturan Wi-Fi TV)
-              </label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  className="form-input"
-                  style={{ flex: 1 }}
-                  placeholder="Contoh: 192.168.1.45"
-                  value={newIpAddress}
-                  onChange={(e) => setNewIpAddress(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  className="rem-btn"
-                  onClick={handleTestPing}
-                  disabled={isPinging}
-                  style={{ padding: '0 12px', fontSize: '0.78rem', background: '#334155', gap: '4px' }}
-                >
-                  <Activity size={14} />
-                  <span>{isPinging ? 'Menguji...' : 'Tes IP'}</span>
-                </button>
-              </div>
-              {pingStatus && (
-                <div style={{ fontSize: '0.74rem', color: '#38bdf8', marginTop: '4px' }}>
-                  {pingStatus}
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div className="form-group">
-                <label className="form-label">Port</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={newPort}
-                  onChange={(e) => setNewPort(Number(e.target.value))}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Protokol</label>
-                <select
-                  className="form-select"
-                  value={newProtocol}
-                  onChange={(e) => setNewProtocol(e.target.value as ProtocolType)}
-                >
-                  <option value="android-tv">Android TV / Google TV</option>
-                  <option value="samsung-tizen">Samsung Tizen Smart TV</option>
-                  <option value="lg-webos">LG webOS WebSocket</option>
-                  <option value="roku-ecp">Roku TV (ECP Port 8060)</option>
-                  <option value="sony-bravia">Sony Bravia Simple IP</option>
-                  <option value="esp32-ir">ESP32 / ESP8266 IR Blaster</option>
-                </select>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="rem-btn"
-              style={{
-                background: 'linear-gradient(135deg, #0284c7, #2563eb)',
-                color: '#ffffff',
-                padding: '12px',
-                fontWeight: 700,
-                marginTop: '6px',
-              }}
-            >
-              Simpan & Hubungkan ke TV Sekarang
-            </button>
-          </form>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -50,17 +50,21 @@ export default function RemotePage() {
 
   // Inisialisasi dari localStorage setelah komponen dimuat di client
   useEffect(() => {
-    const loadedDevices = getStoredDevices();
-    const loadedSettings = getStoredSettings();
+    const timer = setTimeout(() => {
+      const loadedDevices = getStoredDevices();
+      const loadedSettings = getStoredSettings();
 
-    setDevices(loadedDevices);
-    setSettings(loadedSettings);
+      setDevices(loadedDevices);
+      setSettings(loadedSettings);
 
-    if (loadedSettings.activeDeviceId && loadedDevices.some((d) => d.id === loadedSettings.activeDeviceId)) {
-      setActiveDeviceId(loadedSettings.activeDeviceId);
-    } else if (loadedDevices.length > 0) {
-      setActiveDeviceId(loadedDevices[0].id);
-    }
+      if (loadedSettings.activeDeviceId && loadedDevices.some((d) => d.id === loadedSettings.activeDeviceId)) {
+        setActiveDeviceId(loadedSettings.activeDeviceId);
+      } else if (loadedDevices.length > 0) {
+        setActiveDeviceId(loadedDevices[0].id);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const activeDevice = devices.find((d) => d.id === activeDeviceId) || devices[0] || DEFAULT_DEVICE;
@@ -95,7 +99,7 @@ export default function RemotePage() {
 
     // 4. Jika mode Audio IR Dongle 38kHz
     if (activeDevice.protocol === 'audio-ir') {
-      transmitAudioIR(cmd);
+      transmitAudioIR();
     }
 
     // 5. Kirim Perintah ke TV via Protokol Terpilih
@@ -117,12 +121,20 @@ export default function RemotePage() {
     triggerHapticFeedback('light', settings.hapticEnabled);
   };
 
-  // Simpan Perangkat Baru
+  // Simpan & Tautkan Perangkat Baru
   const handleSaveDevice = (newDev: TVDevice) => {
-    const updated = [...devices, newDev];
+    const existsIndex = devices.findIndex((d) => d.id === newDev.id || (d.ipAddress === newDev.ipAddress && d.protocol === newDev.protocol));
+    let updated: TVDevice[];
+    if (existsIndex >= 0) {
+      updated = [...devices];
+      updated[existsIndex] = newDev;
+    } else {
+      updated = [...devices, newDev];
+    }
     setDevices(updated);
     saveStoredDevices(updated);
     handleSelectDevice(newDev.id);
+    setStatusMessage(`Ditautkan: ${newDev.name}`);
   };
 
   // Hapus Perangkat

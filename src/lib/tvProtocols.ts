@@ -12,7 +12,7 @@ export interface VirtualTVState {
   lastCommand: string;
 }
 
-export let virtualTVState: VirtualTVState = {
+export const virtualTVState: VirtualTVState = {
   power: true,
   volume: 24,
   muted: false,
@@ -250,7 +250,7 @@ function mapToRokuKey(cmd: RemoteCommand): string | null {
 }
 
 // Modulasi Audio Jack 38kHz IR Transmitter
-export function transmitAudioIR(command: RemoteCommand) {
+export function transmitAudioIR() {
   if (typeof window === 'undefined') return;
   try {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

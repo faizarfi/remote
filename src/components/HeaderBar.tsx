@@ -121,13 +121,14 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           <HelpCircle size={16} />
         </button>
 
-        {/* Open Settings */}
+        {/* Open Settings / Device Scanner */}
         <button
           type="button"
-          className="header-icon-btn"
+          className="header-icon-btn active"
           onClick={onOpenSettings}
-          title="Pengaturan & Tambah TV"
-          aria-label="Settings"
+          title="Pindai & Tautkan Smart TV"
+          aria-label="Scan TV"
+          style={{ borderColor: 'rgba(56, 189, 248, 0.6)' }}
         >
           <Settings size={16} />
         </button>

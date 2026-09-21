@@ -35,6 +35,20 @@ export interface TVDevice {
   createdAt: number;
 }
 
+export interface DiscoveredDevice {
+  id: string;
+  name: string;
+  brandId: string;
+  ipAddress: string;
+  port: number;
+  protocol: ProtocolType;
+  signalStrength: 'strong' | 'medium' | 'weak';
+  latencyMs?: number;
+  discoveryMethod: 'ssdp' | 'dial' | 'port-scan' | 'bluetooth' | 'nearby-network';
+  modelInfo?: string;
+  manufacturer?: string;
+}
+
 export type RemoteCommand =
   | 'POWER'
   | 'POWER_ON'

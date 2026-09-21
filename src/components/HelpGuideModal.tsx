@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, HelpCircle, Wifi, Smartphone, Cpu, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
+import { X, HelpCircle, Wifi, Smartphone, Cpu, Zap } from 'lucide-react';
 
 interface HelpGuideModalProps {
   isOpen: boolean;
@@ -95,8 +95,8 @@ export const HelpGuideModal: React.FC<HelpGuideModalProps> = ({ isOpen, onClose 
               Agar terasa seperti aplikasi remote asli di smartphone:
             </p>
             <ul style={{ paddingLeft: '18px', color: '#cbd5e1', marginTop: '6px', lineHeight: '1.6' }}>
-              <li><strong>Di Chrome Android:</strong> Ketuk tombol titik tiga di pojok kanan atas &gt; pilih <strong>"Tambahkan ke Layar Utama" (Add to Home screen)</strong>.</li>
-              <li><strong>Di Safari iPhone:</strong> Ketuk tombol Bagikan (ikon kotak panah ke atas) &gt; pilih <strong>"Tambah ke Layar Utama"</strong>.</li>
+              <li><strong>Di Chrome Android:</strong> Ketuk tombol titik tiga di pojok kanan atas &gt; pilih <strong>&ldquo;Tambahkan ke Layar Utama&rdquo; (Add to Home screen)</strong>.</li>
+              <li><strong>Di Safari iPhone:</strong> Ketuk tombol Bagikan (ikon kotak panah ke atas) &gt; pilih <strong>&ldquo;Tambah ke Layar Utama&rdquo;</strong>.</li>
             </ul>
           </div>
 
